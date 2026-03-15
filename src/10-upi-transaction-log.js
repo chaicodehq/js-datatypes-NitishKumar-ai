@@ -19,7 +19,7 @@
  *     - avgTransaction: Math.round(sum of all valid amounts / transactionCount)
  *     - highestTransaction: the full transaction object with highest amount
  *     - categoryBreakdown: object with category as key and total amount as value
- *       e.g., { food: 1500, travel: 800 } (include both credit and debit)
+ *       e.g., { food: 1500, travel: 800 } (include both credit and delete)
  *     - frequentContact: the "to" field value that appears most often
  *       (if tie, return whichever appears first)
  *     - allAbove100: boolean, true if every valid transaction amount > 100 (use every)
@@ -47,5 +47,64 @@
  *   //      frequentContact: "Swiggy", allAbove100: false, hasLargeTransaction: true }
  */
 export function analyzeUPITransactions(transactions) {
-  // Your code here
+  if (!Array.isArray(transactions) || transactions.length === 0) return null;
+
+  const validTxns = transactions.filter(t => 
+    typeof t.amount === "number" && 
+    t.amount > 0 && 
+    (t.type === "credit" || t.type === "debit")
+  );
+
+  if (validTxns.length === 0) return null;
+
+  const totalCredit = validTxns
+    .filter(t => t.type === "credit")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const totalDebit = validTxns
+    .filter(t => t.type === "debit")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const netBalance = totalCredit - totalDebit;
+  const transactionCount = validTxns.length;
+
+  const totalAmount = validTxns.reduce((sum, t) => sum + t.amount, 0);
+  const avgTransaction = Math.round(totalAmount / transactionCount);
+
+  const highestTransaction = [...validTxns].sort((a, b) => b.amount - a.amount)[0];
+
+  const categoryBreakdown = validTxns.reduce((acc, t) => {
+    acc[t.category] = (acc[t.category] || 0) + t.amount;
+    return acc;
+  }, {});
+
+  const contactCounts = validTxns.reduce((acc, t) => {
+    acc[t.to] = (acc[t.to] || 0) + 1;
+    return acc;
+  }, {});
+
+  let frequentContact = "";
+  let maxCount = 0;
+  for (const t of validTxns) {
+    if (contactCounts[t.to] > maxCount) {
+      maxCount = contactCounts[t.to];
+      frequentContact = t.to;
+    }
+  }
+
+  const allAbove100 = validTxns.every(t => t.amount > 100);
+  const hasLargeTransaction = validTxns.some(t => t.amount >= 5000);
+
+  return {
+    totalCredit,
+    totalDebit,
+    netBalance,
+    transactionCount,
+    avgTransaction,
+    highestTransaction,
+    categoryBreakdown,
+    frequentContact,
+    allAbove100,
+    hasLargeTransaction
+  };
 }
